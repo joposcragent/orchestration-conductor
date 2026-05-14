@@ -98,7 +98,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
-	implementation("org.springframework.kafka:spring-kafka")
+	implementation("org.springframework.boot:spring-boot-starter-kafka")
 	implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
 	implementation("io.github.openfeign:feign-okhttp")
 	implementation("io.swagger.core.v3:swagger-annotations:2.2.22")
