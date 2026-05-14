@@ -1,0 +1,67 @@
+openapi: 3.0.3
+info:
+  title: settings-manager search-query slice for orchestration-conductor
+  version: 1.0.0
+servers:
+  - url: http://settings-manager:8080/
+paths:
+  /search-query/list:
+    get:
+      tags:
+        - search-query
+      operationId: listSearchQueries
+      parameters:
+        - name: activeOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Список запросов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchQueriesList"
+components:
+  schemas:
+    SearchQueriesList:
+      type: array
+      items:
+        $ref: "#/components/schemas/SearchQueriesItem"
+    SearchQueriesItem:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        query:
+          type: string
+        contentRelevance:
+          type: number
+          format: double
+        notificationRelevance:
+          type: number
+          format: double
+        isActive:
+          type: boolean
+        isLazyScraping:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - uuid
+        - name
+        - query
+        - contentRelevance
+        - notificationRelevance
+        - isActive
+        - isLazyScraping
+        - createdAt
