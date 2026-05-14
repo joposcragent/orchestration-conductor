@@ -43,10 +43,13 @@ class OrchestrationKafkaPublisher(
 		kafkaTemplate.send(record)
 	}
 
-	fun publishCollectionBatchBegin(jobUuid: UUID) {
+	fun publishCollectionBatchBegin(jobUuid: UUID, isManual: Boolean = true) {
 		val key = jobUuid.toString()
 		val payload = jsonMapper.createObjectNode().apply {
 			put("jobUuid", jobUuid.toString())
+			if(isManual) {
+				putObject("context").put("manual", true)
+			}
 		}
 		publishEnvelope(
 			topic = OrchestrationKafkaTopics.COLLECTION_BATCH,
@@ -62,6 +65,7 @@ class OrchestrationKafkaPublisher(
 		searchQueryUuid: UUID,
 		lazy: Boolean,
 		parentJobUuid: UUID? = null,
+		isManual: Boolean = false,
 	) {
 		val key = jobUuid.toString()
 		val payload = jsonMapper.createObjectNode().apply {
@@ -73,6 +77,9 @@ class OrchestrationKafkaPublisher(
 			put("query", query)
 			put("searchQueryUuid", searchQueryUuid.toString())
 			put("lazy", lazy)
+			if(isManual) {
+				putObject("context").put("manual", true)
+			}
 		}
 		publishEnvelope(
 			topic = OrchestrationKafkaTopics.COLLECTION_QUERY,

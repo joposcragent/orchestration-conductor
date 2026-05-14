@@ -25,6 +25,7 @@ class EnqueueService(
 			searchQueryUuid = body.uuid,
 			lazy = lazy,
 			parentJobUuid = null,
+			isManual = true,
 		)
 		return jobUuid
 	}
