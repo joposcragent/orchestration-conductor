@@ -2,6 +2,7 @@ package ru.sadovskie.leo.app.joposcragent.orchestrationconductor.kafka
 
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
+import org.slf4j.LoggerFactory
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
@@ -15,6 +16,7 @@ class OrchestrationKafkaPublisher(
 	private val kafkaTemplate: KafkaTemplate<String, String>,
 	private val jsonMapper: JsonMapper,
 ) {
+	private val log = LoggerFactory.getLogger(javaClass)
 
 	fun publishEnvelope(
 		topic: String,
@@ -30,6 +32,15 @@ class OrchestrationKafkaPublisher(
 		record.headers().add(RecordHeader("key", messageKey.toByteArray(StandardCharsets.UTF_8)))
 		record.headers().add(RecordHeader("createdAt", createdAt.toByteArray(StandardCharsets.UTF_8)))
 		record.headers().add(RecordHeader("schemaVersion", schemaVersion.toByteArray(StandardCharsets.UTF_8)))
+		if (log.isDebugEnabled) {
+			log.debug(
+				"Kafka send topic={} messageKey={} type={} json={}",
+				topic,
+				messageKey,
+				type,
+				json,
+			)
+		}
 		kafkaTemplate.send(record)
 	}
 

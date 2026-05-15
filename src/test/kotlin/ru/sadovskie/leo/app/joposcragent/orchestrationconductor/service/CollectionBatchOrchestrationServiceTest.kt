@@ -20,7 +20,7 @@ class CollectionBatchOrchestrationServiceTest {
 	private val jsonMapper = JsonMapper.builder().addModule(kotlinModule()).build()
 	private val searchClient = mockk<SettingsSearchQueryFeignClient>()
 	private val publisher = mockk<OrchestrationKafkaPublisher>(relaxUnitFun = true)
-	private val service = CollectionBatchOrchestrationService(searchClient, publisher)
+	private val service = CollectionBatchOrchestrationService(searchClient, publisher, jsonMapper)
 
 	@Test
 	fun `publishes canceled when no active queries`() {

@@ -1,5 +1,6 @@
 package ru.sadovskie.leo.app.joposcragent.orchestrationconductor.service
 
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.kafka.OrchestrationKafkaPublisher
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.openapi.model.SearchQueryItem
@@ -9,10 +10,12 @@ import java.util.UUID
 class EnqueueService(
 	private val publisher: OrchestrationKafkaPublisher,
 ) {
+	private val log = LoggerFactory.getLogger(javaClass)
 
 	fun enqueueCollectionBatch(): UUID {
 		val jobUuid = UUID.randomUUID()
 		publisher.publishCollectionBatchBegin(jobUuid)
+		log.info("manual enqueue: collection-batch-begin jobUuid={}", jobUuid)
 		return jobUuid
 	}
 
@@ -26,6 +29,12 @@ class EnqueueService(
 			lazy = lazy,
 			parentJobUuid = null,
 			isManual = true,
+		)
+		log.info(
+			"manual enqueue: collection-query-begin jobUuid={} searchQueryUuid={} lazy={}",
+			jobUuid,
+			body.uuid,
+			lazy,
 		)
 		return jobUuid
 	}

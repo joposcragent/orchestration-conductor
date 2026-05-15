@@ -28,3 +28,8 @@ management:
     web:
       exposure:
         include: health,info
+
+# Uncomment for verbose service logs (REST + Kafka payloads):
+# logging:
+#   level:
+#     ru.sadovskie.leo.app.joposcragent.orchestrationconductor: DEBUG

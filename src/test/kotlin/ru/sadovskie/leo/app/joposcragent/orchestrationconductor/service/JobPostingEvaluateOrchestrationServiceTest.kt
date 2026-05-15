@@ -13,7 +13,7 @@ class JobPostingEvaluateOrchestrationServiceTest {
 
 	private val jsonMapper = JsonMapper.builder().addModule(kotlinModule()).build()
 	private val publisher = mockk<OrchestrationKafkaPublisher>(relaxUnitFun = true)
-	private val service = JobPostingEvaluateOrchestrationService(publisher)
+	private val service = JobPostingEvaluateOrchestrationService(publisher, jsonMapper)
 
 	@Test
 	fun `ignores non succeeded status`() {

@@ -1,6 +1,7 @@
 package ru.sadovskie.leo.app.joposcragent.orchestrationconductor.kafka
 
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Component
@@ -21,10 +22,24 @@ class CollectionBatchBeginKafkaListener(
 		groupId = "\${app.kafka.batch-consumer-group}",
 	)
 	fun onMessage(record: ConsumerRecord<String, String>) {
+		log.debugKafkaInbound(record)
 		val type = record.headers().lastHeader("type")?.value()?.toString(Charsets.UTF_8)
 			?: record.value()?.let { parseTypeFromJson(it) }
-			?: return
+			?: run {
+				if (log.isDebugEnabled) {
+					log.debug("collection-batch-begin: no message type in headers or json, key={}", record.key())
+				}
+				return
+			}
 		if (type != OrchestrationMessageTypes.COLLECTION_BATCH_BEGIN) {
+			if (log.isDebugEnabled) {
+				log.debug(
+					"collection-batch-begin: ignored message type={} topic={} key={}",
+					type,
+					record.topic(),
+					record.key(),
+				)
+			}
 			return
 		}
 		val root = runCatching { jsonMapper.readTree(record.value()) }.getOrElse {
@@ -35,6 +50,12 @@ class CollectionBatchBeginKafkaListener(
 			log.warn("collection-batch-begin: missing or invalid body")
 			return
 		}
+		log.info(
+			"collection-batch-begin: dispatching parentJobKey={} topic={} type={}",
+			record.key(),
+			record.topic(),
+			type,
+		)
 		collectionBatchOrchestrationService.onCollectionBatchBegin(payload)
 	}
 
@@ -56,10 +77,24 @@ class JobPostingCreateResultKafkaListener(
 		groupId = "\${app.kafka.create-result-consumer-group}",
 	)
 	fun onMessage(record: ConsumerRecord<String, String>) {
+		log.debugKafkaInbound(record)
 		val type = record.headers().lastHeader("type")?.value()?.toString(Charsets.UTF_8)
 			?: record.value()?.let { parseTypeFromJson(it) }
-			?: return
+			?: run {
+				if (log.isDebugEnabled) {
+					log.debug("job-posting-create-result: no message type in headers or json, key={}", record.key())
+				}
+				return
+			}
 		if (type != OrchestrationMessageTypes.JOB_POSTING_CREATE_RESULT) {
+			if (log.isDebugEnabled) {
+				log.debug(
+					"job-posting-create-result: ignored message type={} topic={} key={}",
+					type,
+					record.topic(),
+					record.key(),
+				)
+			}
 			return
 		}
 		val root = runCatching { jsonMapper.readTree(record.value()) }.getOrElse {
@@ -70,6 +105,12 @@ class JobPostingCreateResultKafkaListener(
 			log.warn("job-posting-create-result: missing or invalid body")
 			return
 		}
+		log.info(
+			"job-posting-create-result: dispatching jobKey={} topic={} type={}",
+			record.key(),
+			record.topic(),
+			type,
+		)
 		jobPostingEvaluateOrchestrationService.onJobPostingCreateResult(payload)
 	}
 
@@ -77,6 +118,24 @@ class JobPostingCreateResultKafkaListener(
 		runCatching {
 			jsonMapper.readTree(json).path("headers").path("type").asText(null)
 		}.getOrNull()
+}
+
+private fun Logger.debugKafkaInbound(record: ConsumerRecord<String, String>) {
+	if (!isDebugEnabled) {
+		return
+	}
+	val headersJoined = record.headers().joinToString(prefix = "[", postfix = "]") { h ->
+		"${h.key()}=${h.value().toString(Charsets.UTF_8)}"
+	}
+	debug(
+		"Kafka inbound topic={} partition={} offset={} key={} headers={} value={}",
+		record.topic(),
+		record.partition(),
+		record.offset(),
+		record.key(),
+		headersJoined,
+		record.value(),
+	)
 }
 
 private fun JsonNode.kafkaMessagePayloadOrNull(): JsonNode? {
