@@ -11,6 +11,7 @@ import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.SendResult
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
@@ -19,7 +20,7 @@ class OrchestrationKafkaPublisherTest {
 	private val jsonMapper = JsonMapper.builder().addModule(kotlinModule()).build()
 
 	@Test
-	fun `publishEnvelope sets kafka headers and json envelope`() {
+	fun `publishEnvelope sets kafka headers and payload json value`() {
 		val template = mockk<KafkaTemplate<String, String>>()
 		val slot = slot<ProducerRecord<String, String>>()
 		every { template.send(capture(slot)) } returns CompletableFuture.completedFuture(mockk<SendResult<String, String>>(relaxed = true))
@@ -32,7 +33,10 @@ class OrchestrationKafkaPublisherTest {
 		assertEquals(OrchestrationKafkaTopics.COLLECTION_BATCH, record.topic())
 		assertEquals(job.toString(), record.key())
 		val text = record.value()
-		assertTrue(text.contains("async-job.collection-batch-begin"))
+		assertEquals(
+			OrchestrationMessageTypes.COLLECTION_BATCH_BEGIN,
+			record.headers().lastHeader("type")?.value()?.toString(StandardCharsets.UTF_8),
+		)
 		assertTrue(text.contains("\"jobUuid\":\"$job\""))
 	}
 }

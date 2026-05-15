@@ -24,17 +24,7 @@ class OrchestrationKafkaPublisher(
 	) {
 		val createdAt = OffsetDateTime.now().toString()
 		val schemaVersion = "1.0"
-		val headersNode = jsonMapper.createObjectNode().apply {
-			put("key", messageKey)
-			put("createdAt", createdAt)
-			put("type", type)
-			put("schemaVersion", schemaVersion)
-		}
-		val root = jsonMapper.createObjectNode().apply {
-			set("headers", headersNode)
-			set("payload", payload)
-		}
-		val json = jsonMapper.writeValueAsString(root)
+		val json = jsonMapper.writeValueAsString(payload)
 		val record = ProducerRecord(topic, messageKey, json)
 		record.headers().add(RecordHeader("type", type.toByteArray(StandardCharsets.UTF_8)))
 		record.headers().add(RecordHeader("key", messageKey.toByteArray(StandardCharsets.UTF_8)))

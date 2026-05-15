@@ -32,10 +32,10 @@ class EnqueueServiceTest {
 	fun `enqueue collection query passes lazy flag`() {
 		val id = UUID.randomUUID()
 		val body = SearchQueryItem("q", id, true)
-		every { publisher.publishCollectionQueryBegin(any(), any(), any(), any(), null) } returns Unit
+		every { publisher.publishCollectionQueryBegin(any(), any(), any(), any(), any(), any()) } returns Unit
 
 		service.enqueueCollectionQuery(body)
 
-		verify(exactly = 1) { publisher.publishCollectionQueryBegin(any(), "q", id, true, null) }
+		verify(exactly = 1) { publisher.publishCollectionQueryBegin(any(), "q", id, true, null, true) }
 	}
 }

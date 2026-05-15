@@ -2,6 +2,8 @@ package ru.sadovskie.leo.app.joposcragent.orchestrationconductor.integration
 
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.header.internals.RecordHeader
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -26,6 +28,7 @@ import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.client.model.Sea
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.kafka.OrchestrationKafkaTopics
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.kafka.OrchestrationMessageTypes
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -74,10 +77,16 @@ class CollectionBatchKafkaIntegrationTest {
 	@Test
 	fun `consumes batch begin and publishes collection query`() {
 		val parent = UUID.randomUUID()
-		val json = """
-			{"headers":{"key":"$parent","createdAt":"2026-01-01T12:00:00Z","type":"${OrchestrationMessageTypes.COLLECTION_BATCH_BEGIN}","schemaVersion":"1.0"},"payload":{"jobUuid":"$parent"}}
-		""".trimIndent()
-		kafkaTemplate.send(OrchestrationKafkaTopics.COLLECTION_BATCH, parent.toString(), json).get()
+		val body = """{"jobUuid":"$parent"}"""
+		val headers = listOf(
+			RecordHeader("type", OrchestrationMessageTypes.COLLECTION_BATCH_BEGIN.toByteArray(StandardCharsets.UTF_8)),
+			RecordHeader("key", parent.toString().toByteArray(StandardCharsets.UTF_8)),
+			RecordHeader("createdAt", "2026-01-01T12:00:00Z".toByteArray(StandardCharsets.UTF_8)),
+			RecordHeader("schemaVersion", "1.0".toByteArray(StandardCharsets.UTF_8)),
+		)
+		kafkaTemplate.send(
+			ProducerRecord(OrchestrationKafkaTopics.COLLECTION_BATCH, null, parent.toString(), body, headers),
+		).get()
 
 		val consumerProps = KafkaTestUtils.consumerProps("verify-${UUID.randomUUID()}", "true", embeddedKafka)
 		consumerProps[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
@@ -90,7 +99,10 @@ class CollectionBatchKafkaIntegrationTest {
 		val record = records.iterator().next()
 		consumer.close()
 		assertEquals(OrchestrationKafkaTopics.COLLECTION_QUERY, record.topic())
-		assertTrue(record.value().contains(OrchestrationMessageTypes.COLLECTION_QUERY_BEGIN))
+		assertEquals(
+			OrchestrationMessageTypes.COLLECTION_QUERY_BEGIN,
+			record.headers().lastHeader("type")?.value()?.toString(StandardCharsets.UTF_8),
+		)
 		assertTrue(record.value().contains("my-query"))
 		assertTrue(record.value().contains("\"parentJobUuid\":\"$parent\""))
 	}

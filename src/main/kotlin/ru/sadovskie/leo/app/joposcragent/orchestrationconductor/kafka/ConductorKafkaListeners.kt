@@ -6,6 +6,7 @@ import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Component
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.service.CollectionBatchOrchestrationService
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.service.JobPostingEvaluateOrchestrationService
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 
 @Component
@@ -30,8 +31,8 @@ class CollectionBatchBeginKafkaListener(
 			log.warn("collection-batch-begin: invalid json: {}", it.message)
 			return
 		}
-		val payload = root.get("payload") ?: run {
-			log.warn("collection-batch-begin: missing payload")
+		val payload = root.kafkaMessagePayloadOrNull() ?: run {
+			log.warn("collection-batch-begin: missing or invalid body")
 			return
 		}
 		collectionBatchOrchestrationService.onCollectionBatchBegin(payload)
@@ -65,8 +66,8 @@ class JobPostingCreateResultKafkaListener(
 			log.warn("job-posting-create-result: invalid json: {}", it.message)
 			return
 		}
-		val payload = root.get("payload") ?: run {
-			log.warn("job-posting-create-result: missing payload")
+		val payload = root.kafkaMessagePayloadOrNull() ?: run {
+			log.warn("job-posting-create-result: missing or invalid body")
 			return
 		}
 		jobPostingEvaluateOrchestrationService.onJobPostingCreateResult(payload)
@@ -76,4 +77,14 @@ class JobPostingCreateResultKafkaListener(
 		runCatching {
 			jsonMapper.readTree(json).path("headers").path("type").asText(null)
 		}.getOrNull()
+}
+
+private fun JsonNode.kafkaMessagePayloadOrNull(): JsonNode? {
+	val headers = get("headers")
+	val payload = get("payload")
+	return when {
+		headers != null && headers.isObject && payload != null && payload.isObject -> payload
+		isObject -> this
+		else -> null
+	}
 }
