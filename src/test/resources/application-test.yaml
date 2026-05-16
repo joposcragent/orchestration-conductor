@@ -5,3 +5,5 @@ spring:
 joposcragent:
   settings-manager:
     base-url: http://localhost:59999
+  orchestration-async-jobs-crud:
+    base-url: http://localhost:59998

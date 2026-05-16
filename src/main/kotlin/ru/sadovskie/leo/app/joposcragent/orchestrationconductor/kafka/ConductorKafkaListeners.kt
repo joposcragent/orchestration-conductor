@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Component
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.service.CollectionBatchOrchestrationService
+import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.service.CollectionQueryResultOrchestrationService
 import ru.sadovskie.leo.app.joposcragent.orchestrationconductor.service.JobPostingEvaluateOrchestrationService
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
@@ -112,6 +113,61 @@ class JobPostingCreateResultKafkaListener(
 			type,
 		)
 		jobPostingEvaluateOrchestrationService.onJobPostingCreateResult(payload)
+	}
+
+	private fun parseTypeFromJson(json: String): String? =
+		runCatching {
+			jsonMapper.readTree(json).path("headers").path("type").asText(null)
+		}.getOrNull()
+}
+
+@Component
+class CollectionQueryResultKafkaListener(
+	private val jsonMapper: JsonMapper,
+	private val collectionQueryResultOrchestrationService: CollectionQueryResultOrchestrationService,
+) {
+	private val log = LoggerFactory.getLogger(javaClass)
+
+	@KafkaListener(
+		topics = [OrchestrationKafkaTopics.COLLECTION_QUERY],
+		groupId = "\${app.kafka.collection-query-result-consumer-group}",
+	)
+	fun onMessage(record: ConsumerRecord<String, String>) {
+		log.debugKafkaInbound(record)
+		val type = record.headers().lastHeader("type")?.value()?.toString(Charsets.UTF_8)
+			?: record.value()?.let { parseTypeFromJson(it) }
+			?: run {
+				if (log.isDebugEnabled) {
+					log.debug("collection-query-result: no message type in headers or json, key={}", record.key())
+				}
+				return
+			}
+		if (type != OrchestrationMessageTypes.COLLECTION_QUERY_RESULT) {
+			if (log.isDebugEnabled) {
+				log.debug(
+					"collection-query-result: ignored message type={} topic={} key={}",
+					type,
+					record.topic(),
+					record.key(),
+				)
+			}
+			return
+		}
+		val root = runCatching { jsonMapper.readTree(record.value()) }.getOrElse {
+			log.warn("collection-query-result: invalid json: {}", it.message)
+			return
+		}
+		val payload = root.kafkaMessagePayloadOrNull() ?: run {
+			log.warn("collection-query-result: missing or invalid body")
+			return
+		}
+		log.info(
+			"collection-query-result: dispatching jobKey={} topic={} type={}",
+			record.key(),
+			record.topic(),
+			type,
+		)
+		collectionQueryResultOrchestrationService.onCollectionQueryResult(payload)
 	}
 
 	private fun parseTypeFromJson(json: String): String? =

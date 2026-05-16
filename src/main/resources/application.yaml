@@ -17,11 +17,14 @@ spring:
 joposcragent:
   settings-manager:
     base-url: http://localhost:8080
+  orchestration-async-jobs-crud:
+    base-url: http://localhost:8085
 
 app:
   kafka:
     batch-consumer-group: orchestration-conductor.collection-batch
     create-result-consumer-group: orchestration-conductor.job-posting-create-result
+    collection-query-result-consumer-group: orchestration-conductor.collection-query-result
 
 management:
   endpoints:

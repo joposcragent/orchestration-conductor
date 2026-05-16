@@ -19,7 +19,7 @@ plugins {
 }
 
 group = "ru.sadovskie.leo.app.joposcragent"
-version = "1.2.0"
+version = "1.3.0"
 
 java {
 	toolchain {
@@ -39,6 +39,7 @@ dependencyManagement {
 
 val openapiConductorDir = layout.buildDirectory.dir("generated/openapi-conductor").get().asFile.path
 val openapiFeignDir = layout.buildDirectory.dir("generated/openapi-feign").get().asFile.path
+val openapiAsyncJobsFeignDir = layout.buildDirectory.dir("generated/openapi-async-jobs-feign").get().asFile.path
 
 tasks.register<GenerateTask>("openApiGenerateConductorModels") {
 	generatorName.set("kotlin")
@@ -94,6 +95,35 @@ tasks.register<GenerateTask>("openApiGenerateSettingsFeign") {
 	)
 }
 
+tasks.register<GenerateTask>("openApiGenerateAsyncJobsFeign") {
+	generatorName.set("spring")
+	val specFile = layout.projectDirectory.file("../../specifications/services/orchestration-async-jobs-crud/openapi.yaml").asFile
+	inputSpec.set(specFile.toURI().toString())
+	outputDir.set(openapiAsyncJobsFeignDir)
+	packageName.set("ru.sadovskie.leo.app.joposcragent.orchestrationconductor.asyncjobs.client")
+	apiPackage.set("ru.sadovskie.leo.app.joposcragent.orchestrationconductor.asyncjobs.client.api")
+	modelPackage.set("ru.sadovskie.leo.app.joposcragent.orchestrationconductor.asyncjobs.client.model")
+	configOptions.set(
+		mapOf(
+			"library" to "spring-cloud",
+			"useSpringBoot3" to "true",
+			"documentationProvider" to "none",
+			"dateLibrary" to "java8",
+			"openApiNullable" to "false",
+			"interfaceOnly" to "true",
+			"skipDefaultInterface" to "true",
+		),
+	)
+	globalProperties.set(
+		mapOf(
+			"models" to "",
+			"modelDocs" to "false",
+			"apis" to "false",
+			"supportingFiles" to "false",
+		),
+	)
+}
+
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -127,6 +157,7 @@ kotlin {
 
 sourceSets["main"].kotlin.srcDir("$openapiConductorDir/src/main/kotlin")
 sourceSets["main"].java.srcDir("$openapiFeignDir/src/main/java")
+sourceSets["main"].java.srcDir("$openapiAsyncJobsFeignDir/src/main/java")
 sourceSets["main"].java.srcDir("build/generated-src/jooq/main")
 
 val jooqDbUrl = System.getenv("JOOQ_DB_URL") ?: "jdbc:postgresql://localhost:5432/joposcragent"
@@ -169,11 +200,11 @@ jooq {
 }
 
 tasks.named("compileJava") {
-	dependsOn("openApiGenerateSettingsFeign")
+	dependsOn("openApiGenerateSettingsFeign", "openApiGenerateAsyncJobsFeign")
 }
 
 tasks.named("compileKotlin") {
-	dependsOn("openApiGenerateConductorModels", "generateJooq", "openApiGenerateSettingsFeign")
+	dependsOn("openApiGenerateConductorModels", "generateJooq", "openApiGenerateSettingsFeign", "openApiGenerateAsyncJobsFeign")
 }
 
 val dockerImageRepository = System.getenv("IMAGE_NAME") ?: "joposcragent/${rootProject.name}"
@@ -219,6 +250,7 @@ tasks.jacocoTestReport {
 		"**/orchestrationconductor/openapi/**",
 		"**/orchestrationconductor/jooq/**",
 		"**/orchestrationconductor/client/**",
+		"**/orchestrationconductor/asyncjobs/**",
 	)
 	classDirectories.setFrom(
 		sourceSets.main.get().output.classesDirs.map { dir ->
