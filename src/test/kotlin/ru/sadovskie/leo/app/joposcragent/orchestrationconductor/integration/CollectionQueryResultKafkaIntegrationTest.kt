@@ -87,7 +87,7 @@ class CollectionQueryResultKafkaIntegrationTest {
 				eq(1),
 				eq(1),
 			),
-		).thenReturn(ResponseEntity.ok(AsyncJobList(Collections.emptyList())))
+		).thenReturn(ResponseEntity.ok(AsyncJobList(Collections.emptyList(), 0L)))
 		whenever(asyncJobsCrudClient.finishAsyncJob(eq(parent), eq("SUCCEEDED"), any()))
 			.thenReturn(ResponseEntity.ok().build())
 
@@ -131,7 +131,7 @@ class CollectionQueryResultKafkaIntegrationTest {
 				eq(1),
 				eq(1),
 			),
-		).thenReturn(ResponseEntity.ok(AsyncJobList(listOf(sibling))))
+		).thenReturn(ResponseEntity.ok(AsyncJobList(listOf(sibling), 1L)))
 
 		val body = """{"jobUuid":"$child"}"""
 		val headers = listOf(
@@ -165,7 +165,7 @@ class CollectionQueryResultKafkaIntegrationTest {
 				eq(1),
 				eq(1),
 			),
-		).thenReturn(ResponseEntity.ok(AsyncJobList(Collections.emptyList())))
+		).thenReturn(ResponseEntity.ok(AsyncJobList(Collections.emptyList(), 0L)))
 		whenever(asyncJobsCrudClient.finishAsyncJob(eq(parent), eq("SUCCEEDED"), any()))
 			.thenReturn(ResponseEntity.status(HttpStatus.CONFLICT).build())
 

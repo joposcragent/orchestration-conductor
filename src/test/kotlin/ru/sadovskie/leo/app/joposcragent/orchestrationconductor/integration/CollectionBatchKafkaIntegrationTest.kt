@@ -105,5 +105,27 @@ class CollectionBatchKafkaIntegrationTest {
 		)
 		assertTrue(record.value().contains("my-query"))
 		assertTrue(record.value().contains("\"parentJobUuid\":\"$parent\""))
+
+		val batchConsumerProps = KafkaTestUtils.consumerProps("verify-batch-${UUID.randomUUID()}", "true", embeddedKafka)
+		batchConsumerProps[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+		batchConsumerProps[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
+		batchConsumerProps[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
+		val batchConsumer = KafkaConsumer<String, String>(
+			batchConsumerProps,
+			StringDeserializer(),
+			StringDeserializer(),
+		)
+		batchConsumer.subscribe(listOf(OrchestrationKafkaTopics.COLLECTION_BATCH))
+		val batchRecords = KafkaTestUtils.getRecords(batchConsumer, Duration.ofSeconds(15))
+		val resultRecord = batchRecords.records(OrchestrationKafkaTopics.COLLECTION_BATCH).firstOrNull { r ->
+			r.headers().lastHeader("type")?.value()?.toString(StandardCharsets.UTF_8) ==
+				OrchestrationMessageTypes.COLLECTION_BATCH_RESULT
+		}
+		batchConsumer.close()
+		requireNotNull(resultRecord) { "expected collection-batch-result on ${OrchestrationKafkaTopics.COLLECTION_BATCH}" }
+		assertEquals(parent.toString(), resultRecord.key())
+		assertTrue(resultRecord.value().contains("\"status\":\"SUCCEEDED\""))
+		assertTrue(resultRecord.value().contains("\"jobUuid\":\"$parent\""))
+		assertTrue(resultRecord.value().contains("\"childJobsDispatched\":1"))
 	}
 }

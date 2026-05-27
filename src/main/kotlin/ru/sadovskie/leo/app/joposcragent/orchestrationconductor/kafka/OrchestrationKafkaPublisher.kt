@@ -94,12 +94,19 @@ class OrchestrationKafkaPublisher(
 		parentJobUuid: UUID,
 		status: String,
 		resultMessage: String,
+		childJobsDispatched: Int? = null,
 	) {
 		val key = parentJobUuid.toString()
 		val payload = jsonMapper.createObjectNode().apply {
 			put("jobUuid", parentJobUuid.toString())
 			put("status", status)
-			set("result", jsonMapper.createObjectNode().put("message", resultMessage))
+			set(
+				"result",
+				jsonMapper.createObjectNode().apply {
+					put("message", resultMessage)
+					childJobsDispatched?.let { put("childJobsDispatched", it) }
+				},
+			)
 		}
 		publishEnvelope(
 			topic = OrchestrationKafkaTopics.COLLECTION_BATCH,

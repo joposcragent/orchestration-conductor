@@ -65,6 +65,17 @@ class CollectionBatchOrchestrationService(
 					parentJobUuid = parentJobUuid,
 				)
 			}
+			log.info(
+				"collection-batch-begin: publishing SUCCEEDED batch result parentJobUuid={} childJobsDispatched={}",
+				parentJobUuid,
+				queries.size,
+			)
+			publisher.publishCollectionBatchResult(
+				parentJobUuid = parentJobUuid,
+				status = "SUCCEEDED",
+				resultMessage = "Запущено ${queries.size} дочерних collection-query",
+				childJobsDispatched = queries.size,
+			)
 		} catch (e: Exception) {
 			log.error("collection-batch-begin failed for parentJobUuid={}", parentJobUuid, e)
 			val msg = e.toString() + (e.cause?.let { "\nCause: $it" } ?: "")

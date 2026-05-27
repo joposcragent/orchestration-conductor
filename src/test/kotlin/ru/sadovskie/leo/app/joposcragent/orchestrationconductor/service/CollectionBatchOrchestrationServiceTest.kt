@@ -51,7 +51,14 @@ class CollectionBatchOrchestrationServiceTest {
 
 		verify(exactly = 1) { publisher.publishCollectionQueryBegin(any(), "query1", q1, false, parent) }
 		verify(exactly = 1) { publisher.publishCollectionQueryBegin(any(), "query2", q2, true, parent) }
-		verify(exactly = 0) { publisher.publishCollectionBatchResult(any(), any(), any()) }
+		verify(exactly = 1) {
+			publisher.publishCollectionBatchResult(
+				parent,
+				"SUCCEEDED",
+				"Запущено 2 дочерних collection-query",
+				2,
+			)
+		}
 	}
 
 	@Test
